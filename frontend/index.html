@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>VoiceGuard AI — Voice Authenticity Forensics</title>
+<link rel="stylesheet" href="assets/styles.css?v=3.3" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand" data-view="overview" role="button" tabindex="0" style="cursor:pointer;" title="Go to Overview"><span class="brand-mark">VG</span> VoiceGuard AI</div>
+  <nav class="nav">
+    <button class="nav-item active" data-view="overview">Overview</button>
+    <button class="nav-item" data-view="analyze">Analyze Voice</button>
+    <button class="nav-item" data-view="stream" style="color:#38bdf8; font-weight:700;">🔴 Live Risk Monitoring</button>
+    <button class="nav-item" data-view="report">Forensic Report</button>
+  </nav>
+  <div class="conn-pill ok" id="conn-pill" role="button" tabindex="0" aria-label="System API connection status. Click to refresh" title="Click to verify API connection" style="cursor:pointer;"><span class="conn-dot"></span><span id="conn-label">API CONNECTED</span></div>
+</header>
+
+<!-- ============================================================
+     OVERVIEW
+     ============================================================ -->
+<main class="view active" id="view-overview">
+  <section class="hero">
+    <div>
+      <h1>VoiceGuard AI</h1>
+      <p class="lede">Detect suspicious synthetic and cloned voices using spectral and acoustic forensic analysis — upload or record audio, and see exactly why it was flagged.</p>
+      <div class="hero-ctas">
+        <button class="btn btn-primary" data-view="analyze">Analyze a Voice</button>
+        <button class="btn btn-primary" data-view="stream" style="background:#0284c7; border-color:#0284c7; color:#fff; font-weight:700;">🎙️ Live Voice Monitoring</button>
+        <button class="btn btn-secondary" data-view="report">Forensic Report</button>
+      </div>
+    </div>
+    <div class="scanner-wrap">
+      <div class="scanner-ring"></div>
+      <div class="scanner-ring r2"></div>
+      <div class="scanner-ring r3"></div>
+      <div class="scanner-sweep"></div>
+      <div class="scanner-core mono" style="font-size:11px;color:var(--text-faint);letter-spacing:.5px;">SCANNING</div>
+    </div>
+  </section>
+
+  <div class="section-label">CAPABILITIES</div>
+  <div class="cap-grid">
+    <div class="panel cap-card"><h3>AI Voice Detection</h3><p>CNN classifier trained on Mel-spectrogram representations to flag synthetic vocoder artifacts.</p></div>
+    <div class="panel cap-card"><h3>Spectral Analysis</h3><p>128×128 Mel-spectrogram feature extraction from RMS-normalized audio.</p></div>
+    <div class="panel cap-card"><h3>Prosody Analysis</h3><p>Pitch (f0), pitch dynamism, and energy-envelope analysis via acoustic prosody modeling.</p></div>
+    <div class="panel cap-card"><h3>Dynamic Risk Scoring</h3><p>Configurable Low/Medium/High risk tiers with adjustable sensitivity presets.</p></div>
+    <div class="panel cap-card"><h3>Forensic Visualization</h3><p>Rendered spectrogram and pitch-contour plots for every analyzed clip.</p></div>
+    <div class="panel cap-card"><h3>REST API Integration</h3><p>FastAPI backend exposing prediction endpoints for external integration.</p></div>
+  </div>
+
+  <div class="section-label">HOW IT WORKS</div>
+  <div class="pipeline">
+    <div class="panel pipe-step"><div class="num">01</div><div class="label">Audio Input</div></div>
+    <div class="panel pipe-step"><div class="num">02</div><div class="label">Signal Preprocessing</div></div>
+    <div class="panel pipe-step"><div class="num">03</div><div class="label">Mel-Spectrogram Analysis</div></div>
+    <div class="panel pipe-step"><div class="num">04</div><div class="label">CNN Classification</div></div>
+    <div class="panel pipe-step"><div class="num">05</div><div class="label">Prosody Analysis</div></div>
+    <div class="panel pipe-step"><div class="num">06</div><div class="label">Risk Assessment</div></div>
+  </div>
+
+  <div class="section-label">CURRENT SYSTEM STATUS</div>
+  <div class="status-grid" id="status-grid">
+    <div class="panel status-card"><div class="k">MODEL STATUS</div><div class="v">—</div></div>
+    <div class="panel status-card"><div class="k">DEVICE</div><div class="v">—</div></div>
+    <div class="panel status-card"><div class="k">API STATUS</div><div class="v">—</div></div>
+    <div class="panel status-card"><div class="k">MODEL</div><div class="v">—</div></div>
+  </div>
+</main>
+
+<!-- ============================================================
+     ANALYZE VOICE
+     ============================================================ -->
+<!-- ============================================================
+     ANALYZE VOICE / FORENSIC WORKSTATION
+     ============================================================ -->
+<main class="view" id="view-analyze">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+    <div>
+      <h2 style="margin:0 0 6px 0;">Forensic Analysis Workstation</h2>
+      <p style="color:var(--text-muted); font-size:13px; margin:0;">
+        Inspect voice authenticity via complete file upload or high-fidelity microphone recording.
+      </p>
+    </div>
+  </div>
+
+  <div id="analyze-form">
+    <div class="input-tabs">
+      <button class="input-tab active" id="tab-upload">📁 Upload File</button>
+      <button class="input-tab" id="tab-mic">🎤 Record Microphone</button>
+    </div>
+
+    <!-- 1. Upload File Panel -->
+    <div id="panel-upload">
+      <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Drop audio file or press Enter to browse files">
+        <div class="dz-title">DROP AUDIO FOR FORENSIC ANALYSIS</div>
+        <div class="dz-sub">or click to browse · WAV · MP3 · M4A · FLAC · OGG</div>
+      </div>
+      <input type="file" id="file-input" accept=".wav,.mp3,.m4a,.flac,.ogg" class="hidden" />
+    </div>
+
+    <!-- 2. Single-shot Mic Recording Panel with Frequency Wave Visualizer -->
+    <div id="panel-mic" class="hidden">
+      <div class="panel" style="text-align:center; padding:32px 24px;">
+        <!-- Real-time Recording Timer -->
+        <div class="mono" id="mic-timer" style="font-size:32px; font-weight:800; color:var(--text); letter-spacing:1px; margin-bottom:12px;">00:00.0</div>
+
+        <!-- Frequency Waves Canvas (Audio Visualizer like default recorder apps) -->
+        <div style="background:#070b12; border:1px solid var(--panel-border); border-radius:12px; padding:16px 12px; margin-bottom:20px; box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:0 4px;">
+            <span class="mono" style="font-size:11px; color:var(--text-faint); letter-spacing:0.5px;">AUDIO FREQUENCY WAVES</span>
+            <span class="mono" id="mic-status-badge" style="font-size:11px; color:var(--text-muted); font-weight:600;">IDLE</span>
+          </div>
+          <canvas id="mic-wave-canvas" width="800" height="90" style="width:100%; height:90px; display:block; border-radius:8px; background:rgba(0,0,0,0.3);"></canvas>
+        </div>
+
+        <!-- Controls -->
+        <div style="display:flex; justify-content:center; gap:16px; align-items:center;">
+          <button class="btn btn-primary" id="mic-record-btn" style="min-width:180px; font-size:15px; padding:12px 24px;">
+            ● Start Recording
+          </button>
+        </div>
+        <p class="mono" id="mic-status" style="font-size:12px; color:var(--text-faint); margin-top:14px;">
+          Click to record a voice snippet. Frequency waves will visualize your speech live. Click Stop when done to analyze.
+        </p>
+      </div>
+    </div>
+
+    <div id="file-meta" class="file-meta hidden"></div>
+    <audio id="audio-player" controls class="hidden" style="width:100%;margin-top:10px;"></audio>
+
+    <div style="display:flex;gap:14px;align-items:center;margin-top:20px;">
+      <label class="mono" style="font-size:11.5px;color:var(--text-faint);">SENSITIVITY</label>
+      <select id="sensitivity-select" class="panel" style="padding:8px 12px;border:1px solid var(--panel-border);color:var(--text);background:var(--bg-raised);border-radius:8px;font-size:13px;">
+        <option value="conservative">Conservative (High Sensitivity, lower threshold)</option>
+        <option value="balanced" selected>Balanced (Standard)</option>
+        <option value="aggressive">Aggressive (Strict, fewer false alarms, higher threshold)</option>
+      </select>
+      <button class="btn btn-primary" id="analyze-btn" disabled style="margin-left:auto;">Analyze</button>
+    </div>
+  </div>
+
+  <div id="analyze-progress" class="hidden panel" style="padding:32px;">
+    <div class="section-label">ANALYSIS IN PROGRESS</div>
+    <div class="progress-stage-list" id="stage-list"></div>
+  </div>
+
+  <div id="analyze-error" class="hidden panel error-state">
+    <div class="icon">✕</div>
+    <p id="analyze-error-msg"></p>
+    <button class="btn btn-secondary" id="analyze-retry" style="margin-top:14px;">Try Again</button>
+  </div>
+
+  <div id="analyze-result" class="hidden">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <span class="mono" style="font-size:12px; color:var(--text-muted); font-weight:700;">FORENSIC INSPECTION COMPLETE</span>
+      <button class="btn btn-secondary" id="analyze-reset" style="padding:7px 16px; font-size:13px; font-weight:600;">
+        🔄 Analyze Another Voice / Reset
+      </button>
+    </div>
+    <div class="verdict-hero panel" id="verdict-hero">
+      <div>
+        <div class="verdict-label mono" id="verdict-label"></div>
+        <div class="verdict-text" id="verdict-text"></div>
+        <div class="verdict-sub" id="verdict-sub"></div>
+      </div>
+      <div class="gauge-wrap">
+        <canvas id="gauge-canvas" width="150" height="150"></canvas>
+        <div class="gauge-num"><div class="pct mono" id="gauge-pct"></div><div class="lbl">FAKE PROB.</div></div>
+      </div>
+    </div>
+
+    <div class="metric-grid" id="metric-grid"></div>
+
+    <div class="evidence-block">
+      <h3>Spectral Forensic Evidence</h3>
+      <p class="desc">The Mel-spectrogram represents frequency-energy patterns over time, used directly by the CNN detector to classify this clip.</p>
+      <img class="evidence-img" id="spectrogram-img" alt="Mel-spectrogram" />
+    </div>
+
+    <div class="evidence-block hidden" id="prosody-block">
+      <h3>Prosody &amp; Pitch Analysis</h3>
+      <p class="desc" id="prosody-status-line"></p>
+      <img class="evidence-img" id="prosody-img" alt="Prosody plot" />
+      <div class="prosody-metrics" id="prosody-metrics"></div>
+    </div>
+
+    <div class="evidence-block hidden" id="timeline-block">
+      <h3>Temporal / Windowed Analysis</h3>
+      <p class="desc">Investigative breakdown across overlapping 3-second windows — supplementary detail, shown alongside the primary single-clip verdict above.</p>
+      <div class="timeline" id="timeline"></div>
+      <div class="timeline-axis" id="timeline-axis"></div>
+      <div class="metric-grid" id="timeline-stats" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="evidence-block">
+      <h3>Why is this audio suspicious?</h3>
+      <div class="evidence-cards" id="evidence-cards"></div>
+    </div>
+
+    <div class="alert-panel panel" id="alert-panel">
+      <div>
+        <div class="alert-title" id="alert-title"></div>
+        <p id="alert-text"></p>
+      </div>
+    </div>
+
+    <div style="margin-top:20px; text-align:center;">
+      <button class="btn btn-primary" id="analyze-reset-bottom" style="padding:10px 24px;">
+        🔄 Analyze Another Voice File
+      </button>
+    </div>
+
+  </div>
+</main>
+
+<!-- ============================================================
+     LIVE RISK MONITORING (STANDALONE WORKSTATION)
+     ============================================================ -->
+<main class="view" id="view-stream">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+    <div>
+      <h2 style="margin:0 0 6px 0;">Live Risk Monitoring</h2>
+      <p style="color:var(--text-muted); font-size:13px; margin:0;">
+        Real-time continuous voice analysis — speak into your microphone and VoiceGuard AI will dynamically classify <b>AI Voice vs Real Voice</b> in live sliding windows before you stop recording.
+      </p>
+    </div>
+    <div id="stream-status-badge" class="badge-pill low" style="padding:6px 14px; font-size:12px; font-weight:700;">⚪ IDLE / READY</div>
+  </div>
+
+  <div class="panel" style="padding:22px; margin-bottom:20px;">
+    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+      <button class="btn btn-primary" id="stream-mic-btn" style="min-width:240px; font-size:14.5px; padding:12px 24px;">
+        🎙️ Start Live Voice Monitoring
+      </button>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <label class="mono" style="font-size:11.5px; color:var(--text-faint);">SENSITIVITY:</label>
+        <select id="stream-sensitivity-select" class="panel" style="padding:6px 10px; border:1px solid var(--panel-border); color:var(--text); background:var(--bg-raised); border-radius:6px; font-size:12px;">
+          <option value="balanced" selected>Balanced (Standard)</option>
+          <option value="conservative">Conservative (High Security)</option>
+          <option value="aggressive">Aggressive (Low False Alarm)</option>
+        </select>
+      </div>
+      <div class="mono" id="stream-timer" style="font-size:18px; font-weight:800; color:var(--text); margin-left:auto;">00:00.0</div>
+    </div>
+
+    <!-- Live Audio Oscilloscope Canvas -->
+    <div style="margin-top:16px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+        <span class="mono" style="font-size:11px; color:var(--text-faint); font-weight:600;">LIVE VOICE FREQUENCY WAVES</span>
+        <span class="mono" id="stream-sample-rate" style="font-size:10.5px; color:var(--accent);">16 kHz · MONO PCM</span>
+      </div>
+      <canvas id="stream-canvas" width="800" height="90" style="width:100%; height:90px; background:#070b12; border-radius:8px; border:1px solid var(--panel-border);"></canvas>
+    </div>
+
+    <div style="margin-top:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <span class="mono" style="font-size:11px; color:var(--text-faint);">SIMULATE TEST STREAM:</span>
+      <button class="btn btn-secondary" id="sim-stream-real" style="padding:5px 12px; font-size:11.5px;">▶ Human Real Sample</button>
+      <button class="btn btn-secondary" id="sim-stream-fake" style="padding:5px 12px; font-size:11.5px;">▶ AI Cloned Voice Sample</button>
+    </div>
+  </div>
+
+  <!-- Live Dynamic Verdict Hero -->
+  <div class="verdict-hero panel real" id="stream-verdict-hero" style="margin-bottom:20px; border-width:2px;">
+    <div>
+      <div class="verdict-label mono" id="stream-verdict-label">LIVE STATUS: WAITING FOR AUDIO</div>
+      <div class="verdict-text" id="stream-verdict-text" style="font-size:32px;">LISTENING &amp; BUFFERING VOICE...</div>
+      <div class="verdict-sub" id="stream-verdict-sub">Click "Start Live Voice Monitoring" and speak naturally for 2–3 seconds for sliding window evaluation.</div>
+    </div>
+    <div class="gauge-wrap">
+      <canvas id="stream-gauge-canvas" width="150" height="150"></canvas>
+      <div class="gauge-num">
+        <div class="pct mono" id="stream-gauge-pct">0.0%</div>
+        <div class="lbl">AI PROBABILITY</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Metrics Grid -->
+  <div class="metric-grid" id="stream-metrics-grid">
+    <div class="panel metric-card"><div class="k">LIVE VERDICT</div><div class="v" id="live-m-verdict">—</div></div>
+    <div class="panel metric-card"><div class="k">REAL PROBABILITY</div><div class="v ok" id="live-m-real">—</div></div>
+    <div class="panel metric-card"><div class="k">AI PROBABILITY</div><div class="v" id="live-m-fake">—</div></div>
+    <div class="panel metric-card"><div class="k">RISK TIER</div><div class="v" id="live-m-risk">—</div></div>
+    <div class="panel metric-card"><div class="k">EVALUATED WINDOWS</div><div class="v" id="live-m-windows">0</div></div>
+    <div class="panel metric-card"><div class="k">BUFFER DURATION</div><div class="v" id="live-m-buffer">0.0s</div></div>
+    <div class="panel metric-card"><div class="k">INFERENCE LATENCY</div><div class="v" id="live-m-latency">—</div></div>
+    <div class="panel metric-card"><div class="k">MODEL BACKBONE</div><div class="v" style="font-size:12px;">Wav2Vec 2.0</div></div>
+  </div>
+
+  <!-- Live Rolling Window Timeline -->
+  <div class="panel" style="padding:18px; margin-bottom:20px;">
+    <div class="section-label" style="margin-bottom:8px;">ROLLING WINDOW FORENSIC TIMELINE</div>
+    <p style="font-size:12px; color:var(--text-muted); margin:0 0 10px 0;">
+      Each pill represents an overlapping 3-second evaluation window computed in real-time as you speak.
+    </p>
+    <div class="timeline" id="stream-timeline" style="min-height:36px; background:rgba(255,255,255,0.02); border-radius:6px; padding:4px;">
+      <span class="mono" style="font-size:11px; color:var(--text-faint); margin:auto;">No windows evaluated yet. Speak into the microphone to populate timeline.</span>
+    </div>
+  </div>
+
+  <!-- Stream Console Log -->
+  <div class="panel" style="padding:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <span class="mono" style="font-size:11px; color:var(--text-faint);">REAL-TIME FORENSIC EVENT LOG</span>
+      <button class="btn btn-secondary" id="clear-stream-log" style="padding:2px 8px; font-size:10px;">Clear Log</button>
+    </div>
+    <div class="stream-console" id="stream-console">
+      <div class="stream-line ok">[System Ready] WebSocket endpoint configured at ws://127.0.0.1:8000/ws/stream</div>
+      <div class="stream-line">[Info] Click "Start Live Voice Monitoring" to activate real-time stream.</div>
+    </div>
+  </div>
+</main>
+
+<!-- ============================================================
+     FORENSIC REPORT
+     ============================================================ -->
+<main class="view" id="view-report">
+  <h2 style="margin-bottom:20px;">Forensic Report</h2>
+  <div class="empty-state panel" id="report-empty">
+    <div class="icon">—</div>
+    <p>No analysis yet. Run an analysis on the Analyze Voice page first, then return here for the structured report.</p>
+    <button class="btn btn-primary" data-view="analyze" style="margin-top:10px;">Go to Analyze Voice</button>
+  </div>
+  <div class="panel report-sheet hidden" id="report-content"></div>
+  <div style="display:flex; gap:12px; margin-top:18px;">
+    <button class="btn btn-primary hidden" id="download-report">📥 Download Report (JSON)</button>
+    <button class="btn btn-secondary hidden" id="print-report">🖨️ Print / Save PDF</button>
+  </div>
+</main>
+
+<script src="assets/api.js?v=3.4"></script>
+<script src="assets/app.js?v=3.4"></script>
+</body>
+</html>
